@@ -1,0 +1,1185 @@
+<!doctype html>
+<html lang="en" data-standalone="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c0f12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Set Clock">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+  /* iPhone safe areas (notch, home indicator) */
+  html { padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+  body { margin: 0; }
+  [hidden] { display: none !important; }
+</style>
+<title>Set Clock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+  /* ---------- Tokens: a single dark look, chosen on purpose ---------- */
+  :root {
+    color-scheme: dark;
+    --bg: #0c0f12;
+    --surface: #151a1f;
+    --surface-2: #1d242b;
+    --line: #2a333c;
+    --text: #e9eef1;
+    --muted: #8b98a4;
+    --set: #3fd0b4;      /* teal: work */
+    --rest: #f2b441;     /* amber: rest */
+    --danger: #f0705f;
+    --ink: #0c0f12;      /* text on accent fills */
+    --radius: 16px;
+    --display: "Barlow Condensed", "Arial Narrow", system-ui, -apple-system, sans-serif;
+    --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  html { box-sizing: border-box; height: 100%; background: var(--bg); }
+  *, *::before, *::after { box-sizing: inherit; }
+  body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.4 var(--body);
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    overscroll-behavior: none;
+  }
+  input { -webkit-user-select: text; user-select: text; }
+  button { font: inherit; color: inherit; touch-action: manipulation; cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
+
+  .app {
+    min-height: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    padding-inline: 16px;
+    padding-block: 12px 16px;
+    display: flex;
+    flex-direction: column;
+  }
+  .screen { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+
+  /* ---------- Type ---------- */
+  .label {
+    font: 600 12px/1.2 var(--body);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .num { font-family: var(--display); font-variant-numeric: tabular-nums; font-weight: 600; }
+  h1, h2 { margin: 0; font-family: var(--display); font-weight: 700; text-wrap: balance; letter-spacing: .01em; }
+  h1 { font-size: 40px; line-height: 1; }
+  h2 { font-size: 28px; line-height: 1.05; }
+  p { margin: 0; }
+  .muted { color: var(--muted); }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    min-height: 60px;
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    font: 600 20px/1.1 var(--display);
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    width: 100%;
+    transition: transform .08s ease, filter .15s ease;
+  }
+  .btn:active { transform: scale(.98); filter: brightness(1.1); }
+  .btn small { font: 500 13px/1.2 var(--body); letter-spacing: .02em; text-transform: none; opacity: .8; }
+  .btn-xl { min-height: 76px; font-size: 26px; }
+  .btn-set { background: var(--set); border-color: var(--set); color: var(--ink); }
+  .btn-rest { background: var(--rest); border-color: var(--rest); color: var(--ink); }
+  .btn-danger { color: var(--danger); }
+  .btn-danger-fill { background: var(--danger); border-color: var(--danger); color: var(--ink); }
+  .btn-quiet {
+    min-height: 44px; padding: 8px 14px; width: auto;
+    font: 600 15px/1 var(--body); letter-spacing: .02em; text-transform: none;
+    border-radius: 999px; background: var(--surface); flex-direction: row;
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row-3 { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 10px; }
+  .stack { display: flex; flex-direction: column; gap: 10px; }
+
+  /* ---------- Header ---------- */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+  .brand { font: 700 20px/1 var(--display); letter-spacing: .14em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+  .brand i { width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--rest); border-right-color: var(--set); transform: rotate(-45deg); }
+
+  /* ---------- Home ---------- */
+  .hero {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    padding: 22px 18px 18px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .hero-meta { display: flex; gap: 22px; flex-wrap: wrap; }
+  .hero-meta .num { font-size: 30px; line-height: 1; }
+  .hero-meta div { display: flex; flex-direction: column; gap: 4px; }
+
+  .history { display: flex; flex-direction: column; gap: 8px; }
+  .history details {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .history summary {
+    list-style: none;
+    padding: 14px 16px;
+    display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: baseline;
+    cursor: pointer;
+  }
+  .history summary::-webkit-details-marker { display: none; }
+  .history .when { font-weight: 600; }
+  .history .dur { font: 600 22px/1 var(--display); font-variant-numeric: tabular-nums; text-align: right; }
+  .history .sub { color: var(--muted); font-size: 14px; grid-column: 1 / -1; }
+  .history ol, .summary-list { list-style: none; margin: 0; padding: 0 16px 14px; display: flex; flex-direction: column; }
+  .ex-line { display: flex; justify-content: space-between; gap: 12px; padding-block: 8px; border-top: 1px solid var(--line); }
+  .ex-line span:first-child { overflow-wrap: anywhere; }
+  .ex-line span:last-child { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); padding: 18px 16px; border: 1px dashed var(--line); border-radius: 14px; }
+
+  /* ---------- Exercise entry ---------- */
+  .field {
+    width: 100%;
+    min-height: 60px;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--text);
+    font: 500 22px/1.2 var(--body);
+  }
+  .field:focus { outline: none; border-color: var(--set); box-shadow: 0 0 0 3px color-mix(in srgb, var(--set) 30%, transparent); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    min-height: 44px; padding: 8px 16px;
+    border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+    font-weight: 500; font-size: 16px; max-width: 100%; overflow-wrap: anywhere; text-align: left;
+  }
+  .chip:active { background: var(--surface-2); }
+
+  /* ---------- Workout ---------- */
+  .wo-top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 8px; }
+  .wo-top .stat { display: flex; flex-direction: column; gap: 3px; }
+  .wo-top .stat:last-child { text-align: right; }
+  .wo-top .num { font-size: 30px; line-height: 1; }
+  .icon-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid var(--line); background: var(--surface);
+    display: grid; place-items: center;
+  }
+  .icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .ex-head { display: flex; flex-direction: column; gap: 4px; }
+  .ex-name { font-size: 34px; overflow-wrap: anywhere; }
+
+  .dial { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 0; }
+  .ring { position: relative; width: min(66vw, 36vh, 280px); aspect-ratio: 1; max-width: 100%; }
+  .ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke-width: 10; }
+  .ring .track { stroke: var(--surface-2); }
+  .ring .arc { stroke: var(--phase, var(--muted)); stroke-linecap: round; transition: stroke-dashoffset .25s linear, stroke .3s; }
+  .ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; }
+  .phase-label { font: 700 15px/1 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--phase, var(--muted)); }
+  .big-time { font-size: clamp(56px, 20vw, 88px); line-height: .95; }
+  .ring-sub { font-size: 14px; color: var(--muted); min-height: 1.4em; font-variant-numeric: tabular-nums; }
+
+  [data-phase="set"] { --phase: var(--set); }
+  [data-phase="rest"] { --phase: var(--rest); }
+  [data-phase="restDone"] { --phase: var(--rest); }
+  [data-phase="restDone"] .phase-label { animation: blink 1s steps(2, start) infinite; }
+  @keyframes blink { to { opacity: .35; } }
+
+  .counts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .count {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .count .num { font-size: 36px; line-height: 1; }
+
+  .dock { display: flex; flex-direction: column; gap: 10px; }
+  .adjust .btn { min-height: 52px; font-size: 18px; }
+
+  /* ---------- Rest-over alert ---------- */
+  .alert {
+    position: fixed; inset: 0; z-index: 20;
+    background: var(--rest); color: var(--ink);
+    display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 22px;
+    padding: calc(24px + env(safe-area-inset-top, 0px)) 20px calc(24px + env(safe-area-inset-bottom, 0px));
+    text-align: center;
+    animation: flash .5s ease-in-out 6 alternate;
+  }
+  @keyframes flash { from { background: var(--rest); } to { background: #fff1cf; } }
+  .alert h2 { font-size: clamp(56px, 18vw, 96px); letter-spacing: .02em; text-transform: uppercase; }
+  .alert p { font-size: 18px; font-weight: 600; }
+  .alert .stack { width: 100%; max-width: 420px; }
+  .alert .btn { border-color: var(--ink); }
+  .alert .btn-go { background: var(--ink); color: var(--rest); }
+  .alert .btn-dismiss { background: transparent; color: var(--ink); }
+
+  /* ---------- Settings ---------- */
+  .group { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .preset { min-height: 52px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); font: 600 20px/1 var(--display); font-variant-numeric: tabular-nums; }
+  .preset[aria-pressed="true"] { background: var(--rest); border-color: var(--rest); color: var(--ink); }
+  .stepper { display: grid; grid-template-columns: 56px 1fr 56px; gap: 8px; align-items: center; }
+  .stepper .btn { min-height: 52px; font-size: 24px; }
+  .stepper input { text-align: center; font: 600 28px/1 var(--display); font-variant-numeric: tabular-nums; min-height: 52px; }
+  .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+  .switch { position: relative; width: 58px; height: 34px; flex: none; }
+  .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 0; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); transition: background .2s; pointer-events: none; }
+  .switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: var(--text); transition: transform .2s; }
+  .switch input:checked + span { background: var(--set); border-color: var(--set); }
+  .switch input:checked + span::after { transform: translateX(24px); background: var(--ink); }
+  .switch input:focus-visible + span { outline: 3px solid var(--text); outline-offset: 2px; }
+  .note { font-size: 14px; color: var(--muted); }
+
+  /* ---------- Summary ---------- */
+  .summary-hero { display: flex; flex-direction: column; gap: 6px; }
+  .summary-hero .num { font-size: 72px; line-height: .9; color: var(--set); }
+  .summary-stats { display: flex; gap: 24px; }
+  .summary-stats .num { font-size: 32px; line-height: 1; }
+  .summary-stats div { display: flex; flex-direction: column; gap: 4px; }
+  .summary-list { padding: 0; }
+
+  /* ---------- Edit a saved workout ---------- */
+  .hist-actions { padding: 0 16px 14px; display: flex; justify-content: flex-end; }
+  .btn-save { background: var(--set); border-color: var(--set); color: var(--ink); }
+  .field-sm { min-height: 52px; font-size: 18px; }
+  .dur-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .dur-inputs label { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+  .dur-inputs input { text-align: center; font: 600 26px/1 var(--display); font-variant-numeric: tabular-nums; }
+  .quick { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ed-ex { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .ed-ex-head { display: flex; gap: 8px; align-items: center; }
+  .ed-ex-head .field { flex: 1; min-width: 0; }
+  .ed-ex-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .ed-ex-grid > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .mini-step { display: grid; grid-template-columns: 44px 1fr 44px; gap: 6px; align-items: center; }
+  .mini-step .btn { min-height: 44px; font-size: 22px; padding: 0; }
+  .mini-step .num { text-align: center; font-size: 26px; }
+  .mmss { display: flex; align-items: center; gap: 4px; color: var(--muted); }
+  .mmss input { min-width: 0; width: 100%; text-align: center; padding-inline: 4px; font: 600 22px/1 var(--display); font-variant-numeric: tabular-nums; min-height: 44px; }
+  .icon-btn.danger { color: var(--danger); flex: none; }
+  .edit-error { color: var(--danger); font-weight: 600; }
+  .spacer { flex: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+
+<div class="app">
+
+  <!-- ===== Home ===== -->
+  <section class="screen" id="screenHome" hidden>
+    <div class="topbar">
+      <div class="brand"><i aria-hidden="true"></i>Set Clock</div>
+      <button class="btn btn-quiet" data-action="openSettings" type="button">Settings</button>
+    </div>
+
+    <div class="hero">
+      <h1>Train, rest, repeat.</h1>
+      <div class="hero-meta">
+        <div><span class="label">Rest</span><span class="num" id="homeRest">40 s</span></div>
+        <div><span class="label">Sound</span><span class="num" id="homeSound">On</span></div>
+        <div><span class="label">Workouts logged</span><span class="num" id="homeCount">0</span></div>
+      </div>
+      <button class="btn btn-set btn-xl" data-action="newWorkout" type="button">Start Workout</button>
+    </div>
+
+    <div class="stack">
+      <span class="label">History</span>
+      <div class="history" id="historyList"></div>
+    </div>
+  </section>
+
+  <!-- ===== Exercise entry ===== -->
+  <section class="screen" id="screenExercise" hidden>
+    <div class="topbar">
+      <button class="btn btn-quiet" data-action="cancelExercise" type="button">Back</button>
+      <span class="label" id="exStep">Exercise 1</span>
+    </div>
+    <form id="exForm" class="stack" autocomplete="off">
+      <h2><label for="exName" id="exTitle">What are you training?</label></h2>
+      <input class="field" id="exName" name="exName" type="text" enterkeyhint="go" maxlength="60" placeholder="e.g. Goblet squat" autocapitalize="words">
+      <button class="btn btn-set btn-xl" type="submit" id="exSubmit">Start Exercise</button>
+    </form>
+    <div class="stack" id="recentWrap">
+      <span class="label">Recently used</span>
+      <div class="chips" id="recentChips"></div>
+    </div>
+  </section>
+
+  <!-- ===== Workout ===== -->
+  <section class="screen" id="screenWorkout" data-phase="ready" hidden>
+    <div class="wo-top">
+      <div class="stat"><span class="label">Workout time</span><span class="num" id="woElapsed">0:00</span></div>
+      <button class="icon-btn" data-action="openSettings" type="button" aria-label="Settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+      <div class="stat"><span class="label">Workout sets</span><span class="num" id="woTotal">0</span></div>
+    </div>
+
+    <div class="ex-head">
+      <span class="label" id="exIndex">Exercise 1</span>
+      <h2 class="ex-name" id="exCurrent">Goblet squat</h2>
+    </div>
+
+    <div class="dial">
+      <div class="ring">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="track" cx="60" cy="60" r="54"/>
+          <circle class="arc" id="ringArc" cx="60" cy="60" r="54"/>
+        </svg>
+        <div class="ring-center" role="timer" aria-live="off">
+          <span class="phase-label" id="phaseLabel">Ready</span>
+          <span class="num big-time" id="bigTime">0:00</span>
+          <span class="ring-sub" id="ringSub"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="counts">
+      <div class="count"><span class="label">Current set</span><span class="num" id="cntCurrent">1</span></div>
+      <div class="count"><span class="label">Exercise sets done</span><span class="num" id="cntDone">0</span></div>
+    </div>
+
+    <div class="dock">
+      <!-- During rest: nudge or skip the countdown -->
+      <div class="row-3 adjust" id="restAdjust" hidden>
+        <button class="btn" data-action="restMinus" type="button" aria-label="Remove 10 seconds">−10s</button>
+        <button class="btn" data-action="skipRest" type="button">Skip rest</button>
+        <button class="btn" data-action="restPlus" type="button" aria-label="Add 10 seconds">+10s</button>
+      </div>
+
+      <!-- Ready: exercise chosen, no set running -->
+      <div class="stack" id="dockReady" hidden>
+        <button class="btn btn-set btn-xl" data-action="startSet" type="button" id="btnStartSet">Start Set</button>
+        <div class="row">
+          <button class="btn" data-action="nextExercise" type="button">Change Exercise</button>
+          <button class="btn btn-danger" data-action="askFinish" type="button">Finish Workout</button>
+        </div>
+      </div>
+
+      <!-- Set running -->
+      <div class="stack" id="dockSet" hidden>
+        <button class="btn btn-rest btn-xl" data-action="endSet" type="button">Pause / Rest<small id="restHint">Logs the set · 40 s rest</small></button>
+      </div>
+
+      <!-- After a set (resting or rest over) -->
+      <div class="stack" id="dockPost" hidden>
+        <button class="btn btn-set btn-xl" data-action="startSet" type="button">Continue Workout<small id="continueHint">Repeat exercise · set 2</small></button>
+        <div class="row">
+          <button class="btn" data-action="nextExercise" type="button">Next Exercise</button>
+          <button class="btn btn-danger" data-action="askFinish" type="button">Finish Workout</button>
+        </div>
+      </div>
+
+      <!-- Inline finish confirmation -->
+      <div class="stack" id="dockConfirm" hidden>
+        <p class="muted" id="confirmText">Finish and save this workout?</p>
+        <div class="row">
+          <button class="btn" data-action="cancelFinish" type="button">Keep Going</button>
+          <button class="btn btn-danger-fill" data-action="finish" type="button">Finish</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Summary ===== -->
+  <section class="screen" id="screenSummary" hidden>
+    <div class="topbar">
+      <div class="brand"><i aria-hidden="true"></i>Workout complete</div>
+    </div>
+    <div class="summary-hero">
+      <span class="label" id="sumDate">Today</span>
+      <span class="num" id="sumDuration">0:00</span>
+      <span class="muted">Total workout time</span>
+    </div>
+    <div class="summary-stats">
+      <div><span class="label">Sets</span><span class="num" id="sumSets">0</span></div>
+      <div><span class="label">Exercises</span><span class="num" id="sumExercises">0</span></div>
+    </div>
+    <ol class="summary-list" id="sumList"></ol>
+    <div class="spacer"></div>
+    <div class="stack">
+      <button class="btn" data-action="editWorkout" type="button" id="sumEdit">Fix Times or Sets</button>
+      <button class="btn btn-set btn-xl" data-action="goHome" type="button">Done</button>
+    </div>
+  </section>
+
+  <!-- ===== Edit a saved workout ===== -->
+  <section class="screen" id="screenEdit" hidden>
+    <div class="topbar">
+      <button class="btn btn-quiet" data-action="cancelEdit" type="button">Cancel</button>
+      <span class="label">Edit workout</span>
+      <button class="btn btn-quiet btn-save" data-action="saveEdit" type="button">Save</button>
+    </div>
+
+    <div class="group">
+      <label class="label" for="edStart">Started</label>
+      <input class="field field-sm" id="edStart" type="datetime-local">
+      <span class="label">Duration</span>
+      <div class="dur-inputs">
+        <label><input class="field field-sm" id="edHours" type="number" inputmode="numeric" min="0" max="23"><span>h</span></label>
+        <label><input class="field field-sm" id="edMins" type="number" inputmode="numeric" min="0" max="59"><span>min</span></label>
+      </div>
+      <div class="quick" id="edQuick">
+        <button class="btn btn-quiet" type="button" data-action="durFromWork">Estimate from sets</button>
+      </div>
+      <p class="note" id="edEnds">Ended —</p>
+    </div>
+
+    <div class="stack">
+      <span class="label">Exercises</span>
+      <div class="stack" id="edList"></div>
+      <button class="btn" type="button" data-action="addEditExercise">Add Exercise</button>
+    </div>
+
+    <p class="note edit-error" id="edError" role="alert" hidden></p>
+
+    <div class="group">
+      <button class="btn btn-danger" type="button" data-action="askDeleteWorkout" id="edDelete">Delete Workout</button>
+      <div class="row" id="edDeleteConfirm" hidden>
+        <button class="btn" type="button" data-action="cancelDeleteWorkout">Keep</button>
+        <button class="btn btn-danger-fill" type="button" data-action="deleteWorkout">Delete</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Settings ===== -->
+  <section class="screen" id="screenSettings" hidden>
+    <div class="topbar">
+      <h2>Settings</h2>
+      <button class="btn btn-quiet" data-action="closeSettings" type="button">Done</button>
+    </div>
+
+    <div class="group">
+      <div class="switch-row">
+        <span class="label">Rest between sets</span>
+        <span class="num" style="font-size:28px" id="restValue">40 s</span>
+      </div>
+      <div class="presets" id="presets">
+        <button class="preset" type="button" data-rest="30">30s</button>
+        <button class="preset" type="button" data-rest="40">40s</button>
+        <button class="preset" type="button" data-rest="60">60s</button>
+        <button class="preset" type="button" data-rest="90">90s</button>
+      </div>
+      <label class="label" for="restCustom">Custom (seconds)</label>
+      <div class="stepper">
+        <button class="btn" type="button" data-action="customMinus" aria-label="5 seconds less">−</button>
+        <input class="field" id="restCustom" type="number" inputmode="numeric" min="5" max="600" step="5">
+        <button class="btn" type="button" data-action="customPlus" aria-label="5 seconds more">+</button>
+      </div>
+      <p class="note">5 to 600 seconds. Applies from your next rest.</p>
+    </div>
+
+    <div class="group">
+      <div class="switch-row">
+        <label for="soundToggle">Sound when rest ends</label>
+        <span class="switch"><input type="checkbox" id="soundToggle"><span></span></span>
+      </div>
+      <button class="btn" type="button" data-action="testSound">Test Sound</button>
+      <p class="note">You’ll hear beeps at 3, 2, 1 and a longer tone at zero. The iPhone silent switch mutes web audio.</p>
+    </div>
+
+    <div class="group">
+      <span class="label">History</span>
+      <button class="btn btn-danger" type="button" data-action="askClear" id="btnClear">Clear History</button>
+      <div class="row" id="clearConfirm" hidden>
+        <button class="btn" type="button" data-action="cancelClear">Keep</button>
+        <button class="btn btn-danger-fill" type="button" data-action="clearHistory">Delete All</button>
+      </div>
+    </div>
+
+    <p class="note">Timers run on the real clock, so a rest keeps counting while the phone is locked. The alert plays when you come back to the app.</p>
+  </section>
+</div>
+
+<!-- ===== Rest-over alert (full screen) ===== -->
+<div class="alert" id="restAlert" role="alertdialog" aria-labelledby="alertTitle" hidden>
+  <h2 id="alertTitle">Rest over</h2>
+  <p id="alertText">Set 2 · Goblet squat</p>
+  <div class="stack">
+    <button class="btn btn-xl btn-go" data-action="startSet" type="button">Start Set</button>
+    <button class="btn btn-dismiss" data-action="dismissAlert" type="button">Dismiss</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* =====================================================================
+     Storage. Every access is guarded: storage can be blocked or empty
+     (private mode, cleared site data), and the app must still run.
+     ===================================================================== */
+  const KEYS = {
+    active: 'setclock.active.v1',     // in-progress workout
+    settings: 'setclock.settings.v1', // rest length + sound
+    history: 'setclock.history.v1',   // finished workouts, newest first
+    recent: 'setclock.recent.v1',     // recently used exercise names
+  };
+  function load(key, fallback) {
+    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+    catch { return fallback; }
+  }
+  function store(key, value) {
+    try {
+      if (value == null) localStorage.removeItem(key);
+      else localStorage.setItem(key, JSON.stringify(value));
+    } catch { /* storage unavailable: keep running in memory */ }
+  }
+
+  const settings = Object.assign({ restSec: 40, sound: true }, load(KEYS.settings, {}));
+  let history = load(KEYS.history, []);
+  if (!Array.isArray(history)) history = [];
+
+  // Ask the browser to treat this app's storage as persistent, so saved
+  // history is not cleared under storage pressure. Ignored where unsupported.
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist().catch(() => {}); } catch {}
+  let recent = load(KEYS.recent, []);
+
+  /* The in-progress workout. Every timer is stored as an absolute timestamp
+     (Date.now()), so elapsed/remaining time is always "now minus then" and
+     stays correct across sleep, backgrounding, or a full app restart.
+     {
+       startedAt: number,
+       exercises: [{ name, sets: [{ start, end }] }],   // last = current
+       phase: 'ready' | 'set' | 'rest' | 'restDone',
+       setStartedAt: number,        // phase 'set'
+       restEndsAt: number,          // phase 'rest' / 'restDone'
+       restTotal: number,           // ms, for the ring's progress
+     } */
+  let W = load(KEYS.active, null);
+  const saveWorkout = () => store(KEYS.active, W);
+
+  /* =====================================================================
+     Small helpers
+     ===================================================================== */
+  const $ = (id) => document.getElementById(id);
+  const pad = (n) => String(n).padStart(2, '0');
+  const now = () => Date.now();
+
+  function h(tag, props = {}, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === 'class') el.className = v; else el.setAttribute(k, v);
+    }
+    for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid);
+    return el;
+  }
+
+  // 0:42, 12:05, 1:03:27 (counts up; floors)
+  function fmtClock(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const hr = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return hr ? `${hr}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+  }
+  // Countdown rounds up, so "0:01" shows until the true end.
+  function fmtCountdown(ms) {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    return `${Math.floor(s / 60)}:${pad(s % 60)}`;
+  }
+  function fmtMinutes(ms) {
+    const m = Math.max(1, Math.round(ms / 60000));
+    return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
+  }
+  function fmtDate(ts) {
+    const d = new Date(ts);
+    return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) +
+      ' · ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+  const current = () => W.exercises[W.exercises.length - 1];
+  const totalSets = () => W.exercises.reduce((n, ex) => n + ex.sets.length, 0);
+
+  /* =====================================================================
+     Sound (Web Audio beeps; no files needed, works offline).
+     iOS only allows audio after a user gesture, so the context is created
+     and resumed on the first tap anywhere.
+     ===================================================================== */
+  let audio = null;
+  function unlockAudio() {
+    try {
+      if (!audio) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audio = new AC();
+      }
+      if (audio && audio.state === 'suspended') audio.resume().catch(() => {});
+    } catch { /* no audio available */ }
+  }
+  function beep(freq, dur, delay = 0, vol = 0.3) {
+    if (!audio || !settings.sound) return;
+    const t = audio.currentTime + delay;
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = 'square';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+  }
+  const tickSound = () => beep(660, 0.12, 0, 0.18);
+  function alarmSound() {
+    [0, 0.22, 0.44].forEach((d) => beep(880, 0.16, d, 0.25));
+    beep(1320, 0.7, 0.72, 0.28);
+  }
+  function buzz(pattern) { try { navigator.vibrate && navigator.vibrate(pattern); } catch {} }
+  document.addEventListener('pointerdown', unlockAudio, { capture: true });
+
+  /* =====================================================================
+     Screen Wake Lock: keep the display on while a workout is active.
+     The lock drops whenever the page is hidden, so it is re-requested on
+     return. Unsupported or refused requests are ignored.
+     ===================================================================== */
+  let wakeLock = null;
+  async function requestWakeLock() {
+    if (!W || wakeLock || !('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch { wakeLock = null; }
+  }
+  function releaseWakeLock() {
+    if (wakeLock) wakeLock.release().catch(() => {});
+    wakeLock = null;
+  }
+
+  /* =====================================================================
+     Screens
+     ===================================================================== */
+  const screens = ['Home', 'Exercise', 'Workout', 'Summary', 'Settings', 'Edit'];
+  let screen = 'Home';
+  let settingsReturn = 'Home';
+  function show(name) {
+    screen = name;
+    for (const s of screens) $('screen' + s).hidden = s !== name;
+    window.scrollTo(0, 0);
+    if (name === 'Home') renderHome();
+    if (name === 'Workout') renderWorkout();
+    if (name === 'Settings') renderSettings();
+  }
+
+  /* ---------- Home + history ---------- */
+  function renderHome() {
+    $('homeRest').textContent = `${settings.restSec} s`;
+    $('homeSound').textContent = settings.sound ? 'On' : 'Off';
+    $('homeCount').textContent = history.length;
+    const list = $('historyList');
+    list.replaceChildren();
+    if (!history.length) {
+      list.append(h('p', { class: 'empty' }, 'No workouts yet. Finished sessions are saved here on this phone.'));
+      return;
+    }
+    for (const w of history) {
+      const sets = w.exercises.reduce((n, e) => n + e.sets, 0);
+      list.append(h('details', {},
+        h('summary', {},
+          h('span', { class: 'when' }, fmtDate(w.startedAt)),
+          h('span', { class: 'dur' }, fmtClock(w.endedAt - w.startedAt)),
+          h('span', { class: 'sub' }, `${plural(w.exercises.length, 'exercise')} · ${plural(sets, 'set')}${w.edited ? ' · edited' : ''}`)),
+        h('ol', {}, w.exercises.map((e) =>
+          h('li', { class: 'ex-line' }, h('span', {}, e.name), h('span', {}, plural(e.sets, 'set'))))),
+        h('div', { class: 'hist-actions' },
+          h('button', { class: 'btn btn-quiet', type: 'button', 'data-action': 'editWorkout', 'data-id': String(w.id) }, 'Edit workout'))
+      ));
+    }
+  }
+
+  /* ---------- Exercise entry ---------- */
+  function openExercise() {
+    const n = W ? (current().sets.length ? W.exercises.length + 1 : W.exercises.length) : 1;
+    $('exStep').textContent = `Exercise ${n}`;
+    $('exTitle').textContent = W ? 'Next exercise' : 'What are you training?';
+    $('exSubmit').textContent = W ? 'Use This Exercise' : 'Start Workout';
+    $('exName').value = '';
+    const chips = $('recentChips');
+    chips.replaceChildren(...recent.map((name) => {
+      const b = h('button', { class: 'chip', type: 'button' }, name);
+      b.addEventListener('click', () => chooseExercise(name));
+      return b;
+    }));
+    $('recentWrap').hidden = recent.length === 0;
+    show('Exercise');
+    // Focus only when there is nothing to pick from, so chips stay visible above the keyboard.
+    if (!recent.length) setTimeout(() => $('exName').focus(), 50);
+  }
+
+  function chooseExercise(rawName) {
+    const name = rawName.trim().replace(/\s+/g, ' ');
+    if (!name) { $('exName').focus(); return; }
+    recent = [name, ...recent.filter((r) => r.toLowerCase() !== name.toLowerCase())].slice(0, 12);
+    store(KEYS.recent, recent);
+
+    if (!W) {
+      W = { startedAt: now(), exercises: [], phase: 'ready' };
+    }
+    const cur = W.exercises.length ? current() : null;
+    if (cur && cur.sets.length === 0) cur.name = name;   // replace an exercise with no sets
+    else W.exercises.push({ name, sets: [] });
+    // A rest in progress carries over into the next exercise.
+    if (W.phase === 'set') W.phase = 'ready';
+    confirmingFinish = false;
+    saveWorkout();
+    requestWakeLock();
+    show('Workout');
+  }
+
+  /* ---------- Workout actions ---------- */
+  let confirmingFinish = false;
+  let lastTickSecond = null;
+
+  function startSet() {
+    if (!W) return;
+    W.phase = 'set';
+    W.setStartedAt = now();
+    confirmingFinish = false;
+    $('restAlert').hidden = true;
+    saveWorkout();
+    requestWakeLock();
+    buzz(30);
+    if (screen !== 'Workout') show('Workout'); else renderWorkout();
+  }
+
+  // "Pause / Rest": the set counts as done and the rest countdown starts.
+  function endSet() {
+    if (!W || W.phase !== 'set') return;
+    const t = now();
+    current().sets.push({ start: W.setStartedAt, end: t });
+    W.phase = 'rest';
+    W.restTotal = settings.restSec * 1000;
+    W.restEndsAt = t + W.restTotal;
+    lastTickSecond = null;
+    saveWorkout();
+    buzz(30);
+    renderWorkout();
+  }
+
+  function adjustRest(deltaMs) {
+    if (!W || W.phase !== 'rest') return;
+    W.restEndsAt += deltaMs;
+    W.restTotal = Math.max(1000, W.restTotal + deltaMs);
+    if (W.restEndsAt <= now()) { endRest(false); return; }
+    saveWorkout();
+    renderTimers();
+  }
+
+  // Rest finished. withAlert=false for a manual skip or a restored session.
+  function endRest(withAlert) {
+    W.phase = 'restDone';
+    if (!withAlert) W.restEndsAt = Math.min(W.restEndsAt, now());
+    saveWorkout();
+    renderWorkout();
+    if (withAlert) {
+      const ex = current();
+      $('alertText').textContent = `Set ${ex.sets.length + 1} · ${ex.name}`;
+      $('restAlert').hidden = false;
+      alarmSound();
+      buzz([300, 120, 300, 120, 500]);
+    }
+  }
+
+  function finishWorkout() {
+    if (!W) return;
+    const t = now();
+    if (W.phase === 'set') current().sets.push({ start: W.setStartedAt, end: t });
+    const record = {
+      id: W.startedAt,
+      startedAt: W.startedAt,
+      endedAt: t,
+      exercises: W.exercises
+        .filter((e) => e.sets.length)
+        .map((e) => ({
+          name: e.name,
+          sets: e.sets.length,
+          workMs: e.sets.reduce((ms, s) => ms + (s.end - s.start), 0),
+        })),
+    };
+    W = null;
+    store(KEYS.active, null);
+    releaseWakeLock();
+    $('restAlert').hidden = true;
+    confirmingFinish = false;
+    if (record.exercises.length) {
+      history.unshift(record);
+      history = history.slice(0, 200);
+      store(KEYS.history, history);
+    }
+    renderSummary(record);
+    show('Summary');
+  }
+
+  /* ---------- Workout rendering ---------- */
+  const RING_C = 2 * Math.PI * 54;
+  $('ringArc').style.strokeDasharray = RING_C;
+
+  // Static parts: changes only on actions.
+  function renderWorkout() {
+    if (!W) return;
+    const ex = current();
+    const nextSet = ex.sets.length + 1;
+    $('screenWorkout').dataset.phase = W.phase;
+    $('exIndex').textContent = `Exercise ${W.exercises.length}`;
+    $('exCurrent').textContent = ex.name;
+    $('cntCurrent').textContent = W.phase === 'set' ? ex.sets.length + 1 : nextSet;
+    $('cntDone').textContent = ex.sets.length;
+    $('woTotal').textContent = totalSets();
+    $('btnStartSet').textContent = `Start Set ${nextSet}`;
+    $('restHint').textContent = `Logs set ${nextSet} · ${settings.restSec} s rest`;
+    $('continueHint').textContent = ex.sets.length ? `Repeat exercise · set ${nextSet}` : `First set of ${ex.name}`;
+    document.querySelector('#restAlert .btn-go').textContent = `Start Set ${nextSet}`;
+
+    const post = W.phase === 'rest' || W.phase === 'restDone';
+    $('restAdjust').hidden = W.phase !== 'rest' || confirmingFinish;
+    $('dockReady').hidden = W.phase !== 'ready' || confirmingFinish;
+    $('dockSet').hidden = W.phase !== 'set';
+    $('dockPost').hidden = !post || confirmingFinish;
+    $('dockConfirm').hidden = !confirmingFinish;
+    $('confirmText').textContent = totalSets()
+      ? `Finish and save this workout? ${plural(totalSets(), 'set')} logged.`
+      : 'No sets logged yet. Finishing will discard this workout.';
+    renderTimers();
+  }
+
+  // Live numbers: called by the ticker; everything derives from Date.now().
+  function renderTimers() {
+    if (!W) return;
+    const t = now();
+    $('woElapsed').textContent = fmtClock(t - W.startedAt);
+    const ex = current();
+    let label = 'Ready', big = '0:00', sub = '', progress = 0;
+
+    if (W.phase === 'set') {
+      const e = t - W.setStartedAt;
+      label = `Set ${ex.sets.length + 1}`;
+      big = fmtClock(e);
+      sub = 'Tap Pause / Rest when done';
+      progress = (e % 60000) / 60000;           // sweeps once per minute
+    } else if (W.phase === 'rest') {
+      const left = W.restEndsAt - t;
+      label = 'Rest';
+      big = fmtCountdown(left);
+      progress = Math.min(1, Math.max(0, left / W.restTotal));
+      const last = ex.sets[ex.sets.length - 1];
+      sub = last ? `Last set ${fmtClock(last.end - last.start)}` : 'Next exercise up';
+    } else if (W.phase === 'restDone') {
+      label = 'Rest over';
+      big = '+' + fmtClock(t - W.restEndsAt);    // time since rest ended
+      sub = 'Over rest time';
+      progress = 1;
+    } else {
+      sub = ex.sets.length ? '' : 'Tap Start Set when ready';
+    }
+    $('phaseLabel').textContent = label;
+    $('bigTime').textContent = big;
+    $('ringSub').textContent = sub;
+    $('ringArc').style.strokeDashoffset = RING_C * (1 - progress);
+  }
+
+  // One ticker drives the display and detects the end of rest.
+  // It never counts; it only compares Date.now() with stored timestamps.
+  function tick() {
+    if (!W) return;
+    if (W.phase === 'rest') {
+      const left = W.restEndsAt - now();
+      if (left <= 0) { endRest(true); return; }
+      const sec = Math.ceil(left / 1000);
+      if (sec <= 3 && sec !== lastTickSecond && document.visibilityState === 'visible') tickSound();
+      lastTickSecond = sec;
+    }
+    if (screen === 'Workout') renderTimers();
+  }
+  setInterval(tick, 200);
+
+  /* ---------- Summary ---------- */
+  function renderSummary(r) {
+    const sets = r.exercises.reduce((n, e) => n + e.sets, 0);
+    $('sumDate').textContent = fmtDate(r.startedAt);
+    $('sumDuration').textContent = fmtClock(r.endedAt - r.startedAt);
+    $('sumSets').textContent = sets;
+    $('sumExercises').textContent = r.exercises.length;
+    $('sumList').replaceChildren(...(r.exercises.length
+      ? r.exercises.map((e) => h('li', { class: 'ex-line' },
+          h('span', {}, e.name),
+          h('span', {}, `${plural(e.sets, 'set')} · ${fmtClock(e.workMs)} work`)))
+      : [h('li', { class: 'empty' }, 'No sets were logged, so nothing was saved.')]));
+    // Only saved workouts can be edited.
+    $('sumEdit').dataset.id = String(r.id);
+    $('sumEdit').hidden = !r.exercises.length;
+  }
+
+  /* ---------- Edit a saved workout ----------
+     For fixing a timer left running: change the start, the duration, and
+     each exercise's sets and work time. Changes go into a draft copy and
+     are stored only on Save. */
+  let draft = null;
+  let editReturn = 'Home';
+
+  // <input type="datetime-local"> uses local time as "YYYY-MM-DDTHH:MM".
+  function toLocalInput(ts) {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function fromLocalInput(value) {
+    const t = value ? new Date(value).getTime() : NaN;
+    return Number.isFinite(t) ? t : null;
+  }
+  const intOf = (input) => Math.max(0, parseInt(input.value, 10) || 0);
+
+  function openEdit(id) {
+    const w = history.find((r) => r.id === id);
+    if (!w) return;
+    editReturn = screen;
+    draft = {
+      id: w.id,
+      startedAt: w.startedAt,
+      durationMs: w.endedAt - w.startedAt,
+      exercises: w.exercises.map((e) => ({ name: e.name, sets: e.sets, workMs: e.workMs || 0 })),
+    };
+    $('edStart').value = toLocalInput(draft.startedAt);
+    showDuration(draft.durationMs);
+    $('edDelete').hidden = false;
+    $('edDeleteConfirm').hidden = true;
+    $('edError').hidden = true;
+    renderEditList();
+    renderEditEnd();
+    show('Edit');
+  }
+
+  function showDuration(ms) {
+    const m = Math.max(0, Math.round(ms / 60000));
+    $('edHours').value = Math.floor(m / 60);
+    $('edMins').value = m % 60;
+  }
+  function renderEditEnd() {
+    $('edEnds').textContent = draft.startedAt && draft.durationMs >= 60000
+      ? `Ends ${fmtDate(draft.startedAt + draft.durationMs)} · ${fmtClock(draft.durationMs)}`
+      : 'Set a duration of at least 1 minute.';
+  }
+
+  function renderEditList() {
+    $('edList').replaceChildren(...draft.exercises.map((e, i) => {
+      const name = h('input', {
+        class: 'field field-sm', type: 'text', maxlength: '60', id: `edName${i}`,
+        placeholder: 'Exercise name', 'aria-label': `Exercise ${i + 1} name`,
+      });
+      name.value = e.name;
+      name.addEventListener('input', () => { e.name = name.value; });
+
+      const remove = h('button', { class: 'icon-btn danger', type: 'button', 'aria-label': `Remove exercise ${i + 1}` }, '✕');
+      remove.addEventListener('click', () => { draft.exercises.splice(i, 1); renderEditList(); });
+
+      // Sets: stepper, never below 1 (remove the exercise instead).
+      const count = h('span', { class: 'num' }, String(e.sets));
+      const minus = h('button', { class: 'btn', type: 'button', 'aria-label': 'One set less' }, '−');
+      const plus = h('button', { class: 'btn', type: 'button', 'aria-label': 'One set more' }, '+');
+      minus.addEventListener('click', () => { e.sets = Math.max(1, e.sets - 1); count.textContent = e.sets; });
+      plus.addEventListener('click', () => { e.sets = Math.min(99, e.sets + 1); count.textContent = e.sets; });
+
+      // Work time: minutes and seconds.
+      const mins = h('input', { class: 'field', type: 'number', inputmode: 'numeric', min: '0', id: `edWm${i}`, 'aria-label': 'Work minutes' });
+      const secs = h('input', { class: 'field', type: 'number', inputmode: 'numeric', min: '0', max: '59', id: `edWs${i}`, 'aria-label': 'Work seconds' });
+      mins.value = Math.floor(e.workMs / 60000);
+      secs.value = Math.floor(e.workMs / 1000) % 60;
+      const syncWork = () => { e.workMs = (intOf(mins) * 60 + Math.min(59, intOf(secs))) * 1000; };
+      mins.addEventListener('input', syncWork);
+      secs.addEventListener('input', syncWork);
+
+      return h('div', { class: 'ed-ex' },
+        h('div', { class: 'ed-ex-head' }, name, remove),
+        h('div', { class: 'ed-ex-grid' },
+          h('div', {}, h('span', { class: 'label' }, 'Sets'), h('div', { class: 'mini-step' }, minus, count, plus)),
+          h('div', {}, h('span', { class: 'label' }, 'Work time'), h('div', { class: 'mmss' }, mins, ':', secs))));
+    }));
+  }
+
+  $('edStart').addEventListener('change', () => {
+    draft.startedAt = fromLocalInput($('edStart').value);
+    renderEditEnd();
+  });
+  for (const id of ['edHours', 'edMins']) {
+    $(id).addEventListener('input', () => {
+      draft.durationMs = (intOf($('edHours')) * 60 + intOf($('edMins'))) * 60000;
+      renderEditEnd();
+    });
+  }
+
+  // Estimate the real length from logged work plus one rest between sets.
+  function durationFromWork() {
+    const sets = draft.exercises.reduce((n, e) => n + e.sets, 0);
+    const work = draft.exercises.reduce((ms, e) => ms + e.workMs, 0);
+    draft.durationMs = Math.max(60000, Math.round((work + Math.max(0, sets - 1) * settings.restSec * 1000) / 60000) * 60000);
+    showDuration(draft.durationMs);
+    renderEditEnd();
+  }
+
+  function editError(message) {
+    $('edError').textContent = message;
+    $('edError').hidden = false;
+    $('edError').scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+
+  function saveEdit() {
+    const start = fromLocalInput($('edStart').value);
+    if (start == null) return editError('Enter a valid start date and time.');
+    if (draft.durationMs < 60000) return editError('Duration must be at least 1 minute.');
+    if (!draft.exercises.length) return editError('Add an exercise, or delete this workout instead.');
+    const i = history.findIndex((r) => r.id === draft.id);
+    if (i < 0) return show('Home');
+    const record = {
+      id: draft.id,
+      startedAt: start,
+      endedAt: start + draft.durationMs,
+      exercises: draft.exercises.map((e) => ({
+        name: e.name.trim().replace(/\s+/g, ' ') || 'Exercise',
+        sets: e.sets,
+        workMs: e.workMs,
+      })),
+      edited: true,
+    };
+    history[i] = record;
+    history.sort((a, b) => b.startedAt - a.startedAt);
+    store(KEYS.history, history);
+    draft = null;
+    if (editReturn === 'Summary') { renderSummary(record); show('Summary'); }
+    else show('Home');
+  }
+
+  function deleteWorkout() {
+    history = history.filter((r) => r.id !== draft.id);
+    store(KEYS.history, history);
+    draft = null;
+    show('Home');
+  }
+
+  /* ---------- Settings ---------- */
+  function setRest(sec) {
+    const v = Math.round(Number(sec));
+    if (!Number.isFinite(v)) return;
+    settings.restSec = Math.min(600, Math.max(5, v));
+    store(KEYS.settings, settings);
+    renderSettings();
+  }
+  function renderSettings() {
+    $('restValue').textContent = `${settings.restSec} s`;
+    if (document.activeElement !== $('restCustom')) $('restCustom').value = settings.restSec;
+    for (const b of document.querySelectorAll('.preset')) {
+      b.setAttribute('aria-pressed', String(Number(b.dataset.rest) === settings.restSec));
+    }
+    $('soundToggle').checked = settings.sound;
+  }
+  $('presets').addEventListener('click', (e) => {
+    const b = e.target.closest('.preset');
+    if (b) setRest(b.dataset.rest);
+  });
+  $('restCustom').addEventListener('change', (e) => setRest(e.target.value));
+  $('restCustom').addEventListener('blur', renderSettings);
+  $('soundToggle').addEventListener('change', (e) => {
+    settings.sound = e.target.checked;
+    store(KEYS.settings, settings);
+  });
+
+  /* =====================================================================
+     Event wiring: every button declares its data-action.
+     ===================================================================== */
+  const actions = {
+    newWorkout: openExercise,
+    cancelExercise: () => show(W ? 'Workout' : 'Home'),
+    startSet,
+    endSet,
+    restMinus: () => adjustRest(-10000),
+    restPlus: () => adjustRest(10000),
+    skipRest: () => { if (W && W.phase === 'rest') endRest(false); },
+    nextExercise: openExercise,
+    askFinish: () => { confirmingFinish = true; renderWorkout(); },
+    cancelFinish: () => { confirmingFinish = false; renderWorkout(); },
+    finish: finishWorkout,
+    dismissAlert: () => { $('restAlert').hidden = true; },
+    goHome: () => show('Home'),
+    openSettings: () => { settingsReturn = screen; show('Settings'); },
+    closeSettings: () => { $('clearConfirm').hidden = true; $('btnClear').hidden = false; show(settingsReturn); },
+    customMinus: () => setRest(settings.restSec - 5),
+    customPlus: () => setRest(settings.restSec + 5),
+    testSound: () => { unlockAudio(); const was = settings.sound; settings.sound = true; alarmSound(); settings.sound = was; },
+    askClear: () => { $('btnClear').hidden = true; $('clearConfirm').hidden = false; },
+    cancelClear: () => { $('btnClear').hidden = false; $('clearConfirm').hidden = true; },
+    clearHistory: () => {
+      history = [];
+      store(KEYS.history, history);
+      $('btnClear').hidden = false; $('clearConfirm').hidden = true;
+    },
+    editWorkout: (el) => openEdit(Number(el.dataset.id)),
+    cancelEdit: () => { draft = null; show(editReturn); },
+    saveEdit,
+    durFromWork: durationFromWork,
+    addEditExercise: () => {
+      draft.exercises.push({ name: '', sets: 1, workMs: 0 });
+      renderEditList();
+      $(`edName${draft.exercises.length - 1}`).focus();
+    },
+    askDeleteWorkout: () => { $('edDelete').hidden = true; $('edDeleteConfirm').hidden = false; },
+    cancelDeleteWorkout: () => { $('edDelete').hidden = false; $('edDeleteConfirm').hidden = true; },
+    deleteWorkout,
+  };
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-action]');
+    if (el && actions[el.dataset.action]) actions[el.dataset.action](el);
+  });
+  $('exForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    $('exName').blur();
+    chooseExercise($('exName').value);
+  });
+
+  // Coming back from the lock screen or another app: timers catch up from
+  // their timestamps, a rest that ended meanwhile raises the alert now,
+  // and the wake lock is taken again.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { tick(); requestWakeLock(); }
+    else saveWorkout();
+  });
+  window.addEventListener('pagehide', saveWorkout);
+
+  /* =====================================================================
+     Boot: resume an in-progress workout if there is one.
+     ===================================================================== */
+  if (W && Array.isArray(W.exercises) && W.exercises.length) {
+    if (W.phase === 'rest' && W.restEndsAt <= now()) W.phase = 'restDone';
+    show('Workout');
+    requestWakeLock();
+  } else {
+    W = null;
+    store(KEYS.active, null);
+    show('Home');
+  }
+
+  // Installed (self-hosted) copy only: cache the app for offline use.
+  if (document.documentElement.dataset.standalone && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+
+</body>
+</html>
